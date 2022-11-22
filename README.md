@@ -83,7 +83,7 @@ To help answer this questions we created a time series composed of multiple link
 
 <p align="center">
   <img src="./images/multiple_views.png">
-  <figcaption align = "center"><b>Plot 1 - Matrix of street direction by street type</b></figcaption>
+  <figcaption align = "center"><b>Plot 2 - Linked views comparing Water Complaints and recorded Precipitation</b></figcaption>
 </p>
 
 **Findings:** 2020 has high number of complaints. That can be influenced by COVID-19 and how people spent more at home and had more contact with the problems in their surroundings. Is is important to notice that, despite being correlated, in many months it does not seem to exist a clear casual correlation between rains and complaints. However, overall, there are more complaints in the rainy season. It is interesting to notice that March and April are the months were the snow is melting which can cause some problem as we can see charts. 
@@ -106,7 +106,7 @@ To answer the questions we created a matrix chart (or a calendar chart) where th
 
 <p align="center">
   <img src="./images/matrix_chart.png">
-  <figcaption align = "center"><b>Plot 3 - Linked views comparing Water Complaints and recorded Precipitation</b></figcaption>
+  <figcaption align = "center"><b>Plot 3 - Matrix of street direction by street type</b></figcaption>
 </p>
 
 **Initial Findings:** Avenues and Streets have more complaints as there are more avenues and street types in Chicago. However, avenues still present more problems than regular streets. It is also interesting to notice that streets facing East have less complaints. Further investigation should be done after normalizing the values considering the street type distribution.
