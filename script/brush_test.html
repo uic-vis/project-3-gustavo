@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Focus + Context</title>
+  <style type="text/css">
+    p {
+      color: white
+    }
+    
+    body {
+      background-color: #282c34
+    }
+  </style>
+  <meta charset="utf-8">
+  <script src="//d3js.org/d3.v3.min.js"></script>
+</head>
+
+<body style="overflow: hidden">
+  <p>Programming underway, please stand by.</p>
+  <script>
+    var width = 600,
+      height = 400;
+
+    var margins = {
+      top: 10,
+      left: 50,
+      right: 50,
+      bottom: 50,
+      between: 50
+    };
+
+    var bottomGraphHeight = 50;
+    var topGraphHeight = height - (margins.top + margins.bottom + margins.between + bottomGraphHeight);
+    var graphWidths = width - margins.left - margins.right;
+
+    var svg = d3.select('body')
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .style('font', '10px sans-serif');
+
+    svg.append('defs')
+      .append('clipPath')
+      .attr('id', 'clip')
+      .append('rect')
+      .attr('width', width)
+      .attr('height', height);
+
+    var focus = svg
+      .append('g')
+      .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')');
+
+    var context = svg.append('g')
+      .attr('class', 'context')
+      .attr('transform', 'translate(' + margins.left + ',' +
+        (margins.top + topGraphHeight + margins.between) + ')');
+
+    var xScaleTop = d3.scale.linear().range([0, graphWidths]),
+      xScaleBottom = d3.scale.linear().range([0, graphWidths]),
+      yScaleTop = d3.scale.linear().range([topGraphHeight, 0]),
+      yScaleBottom = d3.scale.linear().range([bottomGraphHeight, 0]);
+
+    var xAxisTop = d3.svg.axis().scale(xScaleTop).orient('bottom'),
+      xAxisBottom = d3.svg.axis().scale(xScaleBottom).orient('bottom');
+    var yAxisTop = d3.svg.axis().scale(yScaleTop).orient('left');
+
+    var lineTop = d3.svg.line()
+      .x(function(d, i) {
+        return xScaleTop(i);
+      })
+      .y(function(d) {
+        return yScaleTop(d.y2);
+      });
+
+    var lineBottom = d3.svg.line()
+      .x(function(d, i) {
+        return xScaleBottom(i);
+      })
+      .y(function(d) {
+        return yScaleBottom(d.y2);
+      });
+
+    var brush = d3.svg.brush()
+      .x(xScaleBottom)
+      .on('brush', function brushed() {
+        xScaleTop.domain(brush.empty() ? xScaleBottom.domain() : brush.extent());
+        focus.select('.line').attr('d', lineTop);
+        focus.select('.x.axis').call(xAxisTop);
+      });
+
+
+    var url = "https://gist.githubusercontent.com/diggetybo/f46ebec18dda16bf39f41b9282b5b593/raw/70c279b9aef16f5348bc3185909c4b001414a611/wav_2.tsv";
+    d3.tsv(url, function(error, rawData) {
+      var data = rawData.map(function(d) {
+        return {
+          y2: +d.wav1
+        }
+      });
+
+      xScaleTop.domain(d3.extent(data, function(d, i) {
+        return i;
+      }));
+      yScaleTop.domain([-.02, .02]);
+      xScaleBottom.domain(d3.extent(data, function(d, i) {
+        return i;
+      }));
+      yScaleBottom.domain([-.02, .02]);
+
+      var topXAxisNodes = focus.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(' + 0 + ',' + (margins.top + topGraphHeight) + ')')
+        .call(xAxisTop);
+      styleAxisNodes(topXAxisNodes, 0);
+
+      focus.append('path')
+        .datum(data)
+        .attr('class', 'line')
+        .attr('d', lineTop);
+
+      var topYAxisNodes = focus.append('g')
+        .call(yAxisTop);
+      styleAxisNodes(topYAxisNodes);
+
+      context.append('path')
+        .datum(data)
+        .attr('class', 'line')
+        .attr('d', lineBottom);
+
+      var bottomXAxisNodes = context.append('g')
+        .attr('transform', 'translate(0,' + bottomGraphHeight + ')')
+        .call(xAxisBottom);
+      styleAxisNodes(bottomXAxisNodes, 0);
+
+      context.append('g')
+        .attr('class', 'x brush')
+        .call(brush)
+        .selectAll('rect')
+        .attr('y', -6)
+        .attr('height', bottomGraphHeight + 7);
+
+      context.selectAll('.extent')
+        .attr({
+          stroke: '#000',
+          'fill-opacity': 0.125,
+          'shape-rendering': 'crispEdges'
+        });
+
+      styleLines(svg);
+    });
+
+    function styleLines(svg) {
+      svg.selectAll('path.line')
+        .attr({
+          fill: 'none',
+          'stroke-width': 1.5,
+          stroke: 'steelblue',
+          'clip-path': 'url(#clip)'
+        });
+    }
+
+    function styleAxisNodes(axisNodes, strokeWidth) {
+      axisNodes.selectAll('.domain')
+        .attr({
+          fill: 'none',
+          'stroke-width': strokeWidth,
+          stroke: 'black'
+        });
+      axisNodes.selectAll('.tick line')
+        .attr({
+          fill: 'none',
+          'stroke-width': 1,
+          stroke: 'black'
+        });
+    }
+  </script>
+</body>
+
+</html>
