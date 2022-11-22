@@ -106,7 +106,7 @@ To answer the questions we created a matrix chart (or a calendar chart) where th
 
 <p align="center">
   <img src="./images/matrix_chart.png">
-  <figcaption align = "center"><b>Plot 1 - Matrix of street direction by street type</b></figcaption>
+  <figcaption align = "center"><b>Plot 3 - Linked views comparing Water Complaints and recorded Precipitation</b></figcaption>
 </p>
 
 **Initial Findings:** Avenues and Streets have more complaints as there are more avenues and street types in Chicago. However, avenues still present more problems than regular streets. It is also interesting to notice that streets facing East have less complaints. Further investigation should be done after normalizing the values considering the street type distribution.
