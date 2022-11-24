@@ -17,7 +17,227 @@ async function init() {
   LinePlot("#LinePlot5",2022, 1);
   LinePlot("#LinePlot6",2022, 0);
   // CalendarPlot("#CalendarPlot", models, "007");
-  drawAggMap()
+  matrixChart();
+
+}
+
+function matrixChart(){
+
+  d3.json("data/water-complaints.json", function(allData){
+    function addToAgg(elem, aggData){
+      let added = false;
+    
+      aggData.forEach((item) => {
+        if(item.street_direction == elem[23] && item.street_type == elem[25]){
+          item.quantity += 1;
+          added = true;
+        }
+      });
+      if(!added){
+        aggData.push({"street_direction": elem[23], "street_type": elem[25], "quantity": 1});
+      }
+    }
+
+    function buildAggDataMatrix(){
+      let aggData = [];
+      
+      dataForMatrix.forEach((elem) => {
+        addToAgg(elem, aggData);
+      });
+    
+      return aggData;
+    }
+    
+    // defining size of svg and margins
+    let margin = ({top: 10, right: 20, bottom: 50, left: 105});
+    let visWidth = 400;
+    let visHeight = 400;
+
+    let waterComplaintsData = allData.data;
+
+    dataForMatrix = waterComplaintsData.filter(function (elem) {
+      return elem[23] != null && elem[25] != null; // STREET_DIRECTION and STREET_TYPE have to be different than null
+    });
+
+    let aggDataMatrix = buildAggDataMatrix();
+
+    x = d3.scaleBand()
+        .domain(Array.from(new Set(aggDataMatrix.map(d => d.street_direction))))
+        .range([0, visWidth])
+        .padding(0.02);
+
+    y = d3.scaleBand()
+        .domain(Array.from(new Set(aggDataMatrix.map(d => d.street_type))))
+        .range([visHeight, 0])
+        .padding(0.02);
+  
+    let arrayQuantity = []
+  
+    for(const elem of aggDataMatrix){
+      arrayQuantity.push(elem.quantity);
+    }
+  
+    arrayQuantity.sort(function(a, b){return a - b});
+    
+    let finalQuantityArray = [];
+    let currentPercentil = 0;
+    
+    // Filtering the first and last 15 percentil to eliminate extreme values
+    arrayQuantity.forEach((elem, index) => {
+      if(currentPercentil < 0.85){
+        finalQuantityArray.push(elem);
+      }
+      currentPercentil = index/arrayQuantity.length;
+    });
+  
+    let colorDomain = d3.extent(finalQuantityArray);
+  
+    colorDomain[0] = -100 // Recalibrating the color scale
+    
+    square_color = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateViridis);
+
+    function matrixChart(){
+      const mainDiv = d3.select("#matrixChart")
+                        .append('div')
+                        .attr('width', visWidth + margin.left + margin.right)
+                        .attr('height', visHeight + margin.top + margin.bottom);
+      
+      const svg = mainDiv.append('svg')
+        .attr('width', visWidth + margin.left + margin.right + 150)
+        .attr('height', visHeight + margin.top + margin.bottom);
+    
+      let colors = ["rgb(247, 251, 255)", "rgb(8, 48, 107)"];
+      
+      const grad = svg.append('defs')
+        .append('linearGradient')
+        .attr('id', 'grad')
+        .attr('x1', '0%')
+        .attr('x2', '0%')
+        .attr('y1', '100%')
+        .attr('y2', '0%');
+    
+      grad.selectAll('stop')
+        .data(colors)
+        .enter()
+        .append('stop')
+        .style('stop-color', function(d){ return d; })
+        .attr('offset', function(d,i){
+          return 100 * (i / (colors.length - 1)) + '%';
+        });
+      
+      svg.append('rect')
+        .attr('x', visWidth+140)
+        .attr('y', 10)
+        .attr('width', 30)
+        .attr('height', visHeight)
+        .style('fill', 'url(#grad)')
+        .style("stroke-width", "1px")
+        .style("stroke", "black");
+        
+      const tooltip = mainDiv.append("div")
+        .style("opacity", 0)
+        .style("background-color", "white")
+        .style("border", "1px solid")
+        .style("pointer-events", "none")
+        .style("z-index", 5)
+        .style("width", "120px")
+        .style("height", "35px")
+        .style("padding", "5px");
+      
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+    
+      // create and add axes
+      const xAxis = d3.axisBottom(x);
+    
+      const xAxisGroup = g.append("g")
+          .call(xAxis)
+          .attr("transform", `translate(0, ${visHeight})`);
+    
+      xAxisGroup.append("text")
+          .attr("x", visWidth / 2)
+          .attr("y", 40)
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .text("Street Direction")
+          .style("font-size", "15px");
+    
+      const yAxis = d3.axisLeft(y);
+    
+      const yAxisGroup = g.append("g")
+          .call(yAxis);
+    
+      yAxisGroup.append("text")
+        .attr("x", "-65px")
+        .attr("y", visHeight / 2)
+        .attr("fill", "black")
+        .attr("text-anchor", "middle")
+        .text("Street Type")
+        .style("font-size", "15px")
+        .style("writing-mode", "vertical-rl");
+      
+      let squaresGroup = g.append("g");
+    
+      function mouseover(d, tooltip) {
+        tooltip.style("opacity", 1);
+      }
+
+      function mousemove(d, tooltip) {
+
+        tooltip
+          .html("Quantity: " + d.quantity)
+          .style("left", d3.event.pageX + "px")
+          .style("position", "absolute")
+          .style("top", d3.event.pageY + "px")
+      }
+
+      function mouseleave(d, tooltip) {
+        tooltip.style("opacity", 0)
+      }
+
+      function update(data) {
+        
+        // draw bars
+        let selectRect = squaresGroup.selectAll("rect")
+                                  .data(data);
+        
+        selectRect 
+          .attr("fill", 'blue')
+          .attr("height", y.bandwidth())
+          .attr("width", x.bandwidth())
+          .attr("fill", d => square_color(d.quantity))
+          .attr("x", d => x(d.street_direction))
+          .attr("y", d => y(d.street_type))
+          .on("mouseover", (d) => mouseover(d,tooltip))
+          .on("mousemove", (d) => mousemove(d,tooltip))
+          .on("mouseleave", (d) => mouseleave(d,tooltip));
+
+        selectRect.enter()
+          .append("rect")
+          .attr("fill", 'blue')
+          .attr("height", y.bandwidth())
+          .attr("width", x.bandwidth())
+          .attr("fill", d => square_color(d.quantity))
+          .attr("x", d => x(d.street_direction))
+          .attr("y", d => y(d.street_type))
+          .on("mouseover", (d) => mouseover(d,tooltip))
+          .on("mousemove", (d) => mousemove(d,tooltip))
+          .on("mouseleave", (d) => mouseleave(d,tooltip));
+
+        selectRect.exit().remove();
+
+      }
+    
+      return Object.assign(mainDiv.node(), { update });
+    }
+
+    const matrixChartObject = matrixChart();
+    matrixChartObject.update(aggDataMatrix);
+
+    drawAggMap(matrixChartObject, waterComplaintsData);
+
+  });
+
 
 }
 
@@ -300,9 +520,26 @@ var tooltip = d3.select("#tooltip-map")
        .attr("class", "tooltip")
        .style("opacity", 0);
 
-function drawAggMap(){
+function drawAggMap(matrixChart, waterComplaintsData){
 
-  d3.json("data/mapChicagoDistribution.geojson", function(jsonData){
+  let filteredComplaints = waterComplaintsData.filter(function (elem) {
+    return elem[23] != null && elem[25] != null && elem[44] != null && elem[45] != null; // STREET_DIRECTION and STREET_TYPE and LATITUDE and LONGITUDE have to be different than null
+  });
+
+  function updateMatrix(filteredComplaints, zipData){
+
+    let dataInTheZip = [];
+
+    filteredComplaints.forEach((elem) => {
+      // if elem within zipData add to dataInTheZip
+      
+    });
+
+    console.log(zipData);
+    console.log(filteredComplaints);
+  }
+
+  d3.json("data/requests_by_zip.geojson", function(jsonData){
     var width = $("#map-layer").width();
     var height = $("#map-layer").height();
     var center = [-87.623177, 41.881832];
@@ -317,6 +554,10 @@ function drawAggMap(){
     var svg = d3.select(".map")
                 .attr("height", height);
 
+    let colorDomain = d3.extent(jsonData.features, d => d.properties["count"]);
+
+    let colorScale = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateViridis);
+
     svg.append('g')
         .selectAll('path')
         .data(jsonData.features)
@@ -327,27 +568,21 @@ function drawAggMap(){
         .style("stroke", "#636363")
         .style('stroke-width', "1px")
         .attr('fill', function(d) { 
-            if(d.properties["Count_Total"]<=10){return "#eff3ff"}
-        else if(d.properties["Count_Total"]>10 && d.properties["Count_Total"]<=20){return "#bdd7e7"}
-        else if(d.properties["Count_Total"]>20 && d.properties["Count_Total"]<=30){return "#6baed6"}
-        else if(d.properties["Count_Total"]>30 && d.properties["Count_Total"]<=40){return "#3182bd"}
-        else if(d.properties["Count_Total"]>40){return "#08519c"}
-        else {
-            return "#053061";
-            }
-        
+          return colorScale(d.properties["count"]);
         })
         .on('click',function(d){
 
-            d3.selectAll(".clicked1")
-                    .classed("clicked1", false)
-                    .style('stroke', 'black')
-                    .style('stroke-width', "1px");
+          updateMatrix(filteredComplaints, d);
 
-              d3.select(this)
-                    .classed("clicked1", true)
-                    .style('stroke', 'red')
-                    .style('stroke-width', "5px");
+          d3.selectAll(".clicked1")
+                  .classed("clicked1", false)
+                  .style('stroke', 'black')
+                  .style('stroke-width', "1px");
+
+            d3.select(this)
+                  .classed("clicked1", true)
+                  .style('stroke', 'red')
+                  .style('stroke-width', "5px");
 
         });
   });
