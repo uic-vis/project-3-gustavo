@@ -48,6 +48,13 @@
     grid-row: 3/4;
 }
 
+#button_reset_matrix{
+    position: absolute;
+    left: "10px";
+    width: "100px";
+    height: "50px";
+}
+
 /*Detail panels grid arrangements*/
 #details-panel {
     display: grid;

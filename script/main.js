@@ -23,18 +23,20 @@ async function init() {
 
 function matrixChart(){
 
-  d3.json("data/water-complaints.json", function(allData){
+  // d3.json("data/water-complaints.json", function(allData){
+  d3.json("data/water-complaint-zip.geojson", function(allData){
+
     function addToAgg(elem, aggData){
       let added = false;
     
       aggData.forEach((item) => {
-        if(item.street_direction == elem[23] && item.street_type == elem[25]){
+        if(item.street_direction == elem.street_direction && item.street_type == elem.street_type){
           item.quantity += 1;
           added = true;
         }
       });
       if(!added){
-        aggData.push({"street_direction": elem[23], "street_type": elem[25], "quantity": 1});
+        aggData.push({"street_direction": elem.street_direction, "street_type": elem.street_type, "quantity": 1});
       }
     }
 
@@ -42,7 +44,7 @@ function matrixChart(){
       let aggData = [];
       
       dataForMatrix.forEach((elem) => {
-        addToAgg(elem, aggData);
+        addToAgg(elem.properties, aggData);
       });
     
       return aggData;
@@ -53,12 +55,13 @@ function matrixChart(){
     let visWidth = 400;
     let visHeight = 400;
 
-    let waterComplaintsData = allData.data;
+    let waterComplaintsData = allData.features;
 
     dataForMatrix = waterComplaintsData.filter(function (elem) {
-      return elem[23] != null && elem[25] != null; // STREET_DIRECTION and STREET_TYPE have to be different than null
+      return elem.properties.street_direction != null && elem.properties.street_type != null && elem.properties.latitude != null && elem.properties.longitude != null;
     });
 
+    
     let aggDataMatrix = buildAggDataMatrix();
 
     x = d3.scaleBand()
@@ -234,7 +237,7 @@ function matrixChart(){
     const matrixChartObject = matrixChart();
     matrixChartObject.update(aggDataMatrix);
 
-    drawAggMap(matrixChartObject, waterComplaintsData);
+    drawAggMap(matrixChartObject, dataForMatrix);
 
   });
 
@@ -520,23 +523,45 @@ var tooltip = d3.select("#tooltip-map")
        .attr("class", "tooltip")
        .style("opacity", 0);
 
-function drawAggMap(matrixChart, waterComplaintsData){
+function drawAggMap(matrixChart, filteredComplaints){
 
-  let filteredComplaints = waterComplaintsData.filter(function (elem) {
-    return elem[23] != null && elem[25] != null && elem[44] != null && elem[45] != null; // STREET_DIRECTION and STREET_TYPE and LATITUDE and LONGITUDE have to be different than null
-  });
+  function updateMatrix(filteredComplaintsData, selectedZip, matrixChartObject){
 
-  function updateMatrix(filteredComplaints, zipData){
-
-    let dataInTheZip = [];
-
-    filteredComplaints.forEach((elem) => {
-      // if elem within zipData add to dataInTheZip
-      
+    let selectedComplaints = filteredComplaintsData.filter(function (elem) {
+      if(selectedZip == -1){
+        return true; // all elements included
+      }
+      return elem.properties.zip == selectedZip;
     });
 
-    console.log(zipData);
-    console.log(filteredComplaints);
+    function addToAgg(elem, aggData){
+      let added = false;
+    
+      aggData.forEach((item) => {
+        if(item.street_direction == elem.street_direction && item.street_type == elem.street_type){
+          item.quantity += 1;
+          added = true;
+        }
+      });
+      if(!added){
+        aggData.push({"street_direction": elem.street_direction, "street_type": elem.street_type, "quantity": 1});
+      }
+    }
+
+    function buildAggDataMatrix(){
+      let aggData = [];
+      
+      selectedComplaints.forEach((elem) => {
+        addToAgg(elem.properties, aggData);
+      });
+    
+      return aggData;
+    }
+
+    let aggDataMatrix = buildAggDataMatrix();
+
+    matrixChartObject.update(aggDataMatrix);
+
   }
 
   d3.json("data/requests_by_zip.geojson", function(jsonData){
@@ -572,7 +597,7 @@ function drawAggMap(matrixChart, waterComplaintsData){
         })
         .on('click',function(d){
 
-          updateMatrix(filteredComplaints, d);
+          updateMatrix(filteredComplaints, d.properties.zip, matrixChart);
 
           d3.selectAll(".clicked1")
                   .classed("clicked1", false)
@@ -585,6 +610,15 @@ function drawAggMap(matrixChart, waterComplaintsData){
                   .style('stroke-width', "5px");
 
         });
+
+      d3.select("#button_reset_matrix").on('click', function(){
+        d3.selectAll(".totalHNC")
+            .classed("clicked1", false)
+            .style('stroke', 'black')
+            .style('stroke-width', '1px');
+
+        updateMatrix(filteredComplaints, -1, matrixChart);
+      })
   });
 
 }
