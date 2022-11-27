@@ -97,7 +97,7 @@ function matrixChart(){
   
     colorDomain[0] = -100 // Recalibrating the color scale
     
-    square_color = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateViridis);
+    square_color = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateRgb("white", "blue"));
 
     function matrixChart(){
       const mainDiv = d3.select("#matrixChart")
@@ -108,8 +108,8 @@ function matrixChart(){
       const svg = mainDiv.append('svg')
         .attr('width', visWidth + margin.left + margin.right + 150)
         .attr('height', visHeight + margin.top + margin.bottom);
-    
-      let colors = ["rgb(247, 251, 255)", "rgb(8, 48, 107)"];
+
+      let colors = ["rgb(255, 255, 255)", "rgb(0, 0, 255)"];
       
       const grad = svg.append('defs')
         .append('linearGradient')
@@ -275,13 +275,6 @@ async function loadGrid(year){
 
 async function addDataMapbox(map){
 
-  // let container = d3.select("#map-mapbox");
-
-  // map.on("mousemove", e => {
-  //   container.value = e.lngLat;
-  //   container.dispatchEvent(new CustomEvent("input"));
-  // });
-
   let canvasContainer = map.getCanvasContainer();
 
   let selectElem = d3.select(canvasContainer)
@@ -290,7 +283,7 @@ async function addDataMapbox(map){
     .style("position", "absolute")
     .style("z-index", 3)
     .style("right", "10px")
-    .style("top", "66px");
+    .style("top", "25px");
 
   selectElem.append("option")
     .attr("value", "All time")
@@ -320,7 +313,7 @@ async function addDataMapbox(map){
     .select(canvasContainer)
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "50vh")
+    .attr("height", "70vh")
     .style("position", "absolute")
     .style("left", "0")
     .style("top", "0")
@@ -334,7 +327,7 @@ async function addDataMapbox(map){
     .attr('y1', '100%')
     .attr('y2', '0%');
 
-  let colors = ["rgb(247, 251, 255)", "rgb(8, 48, 107)"];
+  let colors = ["rgb(255, 255, 255)", "rgb(0, 0, 255)"];
 
   grad.selectAll('stop')
     .data(colors)
@@ -375,7 +368,8 @@ async function addDataMapbox(map){
 
   let renderHeatMap = (grid) => {
 
-    let grid_color = d3.scaleSequential(d3.interpolateViridis);
+    let grid_color = d3.scaleSequential(d3.interpolateRgb("white", "blue"));
+
     grid_color.domain(d3.extent(grid, d => d.n_complaints));
 
     let dotsSelection = svg
@@ -565,23 +559,33 @@ function drawAggMap(matrixChart, filteredComplaints){
   }
 
   d3.json("data/requests_by_zip.geojson", function(jsonData){
-    var width = $("#map-layer").width();
-    var height = $("#map-layer").height();
+    // var width = $("#map-layer").width();
+    // var height = $("#map-layer").height();
+
+    let width = 550;
+    let height = 550;
+
     var center = [-87.623177, 41.881832];
     var scale = 170;
 
+    // var projection = d3.geoMercator().center(center)
+    //                     .scale(width*50)
+    //                     .translate([width/1.5, height/3]);
+
     var projection = d3.geoMercator().center(center)
-                        .scale(width*50)
+                        .scale(width*100)
                         .translate([width/1.5, height/3]);
+    
     var path = d3.geoPath().projection(projection);
 
     //Create SVG element
     var svg = d3.select(".map")
+                .attr("width", width)
                 .attr("height", height);
 
     let colorDomain = d3.extent(jsonData.features, d => d.properties["count"]);
 
-    let colorScale = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateViridis);
+    let colorScale = d3.scaleSequential().domain(colorDomain).interpolator(d3.interpolateRgb("white", "blue"));
 
     svg.append('g')
         .selectAll('path')
@@ -590,7 +594,7 @@ function drawAggMap(matrixChart, filteredComplaints){
         .attr('d', path)
         .attr('vector-effect', 'non-scaling-stroke')
         .attr('class', 'totalHNC')
-        .style("stroke", "#636363")
+        .style("stroke", "black")
         .style('stroke-width', "1px")
         .attr('fill', function(d) { 
           return colorScale(d.properties["count"]);
@@ -818,17 +822,19 @@ function LinePlot(container, year, complaint){
     width = $(container).width() - margin.left - margin.right,
     height = $(container).height() - margin.top - margin.bottom
 
-    var LinePlot = d3.select(container)
-        .append("svg")
-        .attr("width", $(container).width())
-        .attr("height", $(container).height())
-        .attr("class", "LinePlotClass")
+
+    var svg = d3.select(container)
+    .append("svg")
+    .attr("width", $(container).width())
+    .attr("height", $(container).height())
+    .attr("class", "LinePlotClass")
+
+    var LinePlot = svg
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
         var yLevel = 0
         var xLevel = 0
 
-    
     	d3.csv("data/MergedData2020.csv", function(d){
     		if(year==2020){
     			xLevel = 'Months of 2020';
@@ -865,93 +871,192 @@ function LinePlot(container, year, complaint){
     		}
     },
 
-      function(data) {
+    function(data) {
 
-        var x = d3.scaleTime()
-          .domain(d3.extent(data, function(d) { return d.date; }))
-          .range([ 0, width]);
-        LinePlot.append("g")
-          .attr("transform", "translate(0," + height + ")")
-          .call(d3.axisBottom(x))
-          .append("text")
-            .attr("class", "label")
-            .attr("x", width-width/2)
-            .attr("y", 28)
-            .style("text-anchor", "end")
-            .attr("fill", "#000000")
-            .text(String(xLevel));
+      let X = [];
+      let Y = [];
 
-        // Add Y axis
-        var y = d3.scaleLinear()
-          .domain([0, d3.max(data, function(d) { return +d.value; })])
-          .range([ height, 0 ]);
-        LinePlot.append("g")
-          .call(d3.axisLeft(y))
-          .append("text")
+      data.forEach((elem) => {
+        X.push(elem.date);
+      });
+
+      data.forEach((elem) => {
+        Y.push(elem.value);
+      });
+
+      var x = d3.scaleTime()
+        .domain(d3.extent(data, function(d) { return d.date; }))
+        .range([ 0, width]);
+      LinePlot.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x))
+        .append("text")
           .attr("class", "label")
-          .attr("transform", "rotate(-90)")
-          .attr("x", -10)
-          .attr("y", 15)
-          .attr("dy", ".71em")
+          .attr("x", width-width/2)
+          .attr("y", 28)
           .style("text-anchor", "end")
           .attr("fill", "#000000")
-          .text(String(yLevel));
+          .text(String(xLevel));
 
-        // Add the line
-        LinePlot.append("path")
-          .datum(data)
-          .attr("fill", "none")
-          .attr("stroke", "steelblue")
-          .attr("stroke-width", 1.5)
-          .attr("d", d3.line()
-            .x(function(d) { return x(d.date) })
-            .y(function(d) { return y(d.value) })
-          )
-          
-          // create a tooltip
-          var tooltipScatterlot = d3.select(".tooltip_ScatterPlot")
+      // Add Y axis
+      var y = d3.scaleLinear()
+        .domain([0, d3.max(data, function(d) { return +d.value; })])
+        .range([ height, 0 ]);
+      LinePlot.append("g")
+        .call(d3.axisLeft(y))
+        .append("text")
+        .attr("class", "label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -10)
+        .attr("y", 15)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .attr("fill", "#000000")
+        .text(String(yLevel));
+
+      // Add the line
+      LinePlot.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .x(function(d) { return x(d.date) })
+          .y(function(d) { return y(d.value) })
+        )
+
+            // svg.append('rect')
+            // .attr('x', visWidth+140)
+            // .attr('y', 10)
+            // .attr('width', 30)
+            // .attr('height', visHeight)
+            // .style('fill', 'url(#grad)')
+            // .style("stroke-width", "1px")
+            // .style("stroke", "black");
+
+        
+        // create a tooltip
+        var tooltipScatterlot = d3.select(".tooltip_ScatterPlot")
+        .attr("class", "tooltip")
+        .style("opacity", 0)
           .attr("class", "tooltip")
-          .style("opacity", 0)
-            .attr("class", "tooltip")
-            .style("background-color", "white")
-            .style("border", "solid")
-            .style("border-width", "2px")
-            .style("border-radius", "5px")
-            .style("padding", "5px")
+          .style("background-color", "white")
+          .style("border", "solid")
+          .style("border-width", "2px")
+          .style("border-radius", "5px")
+          .style("padding", "5px")
+          .style("pointer-events", "none")
+          .style("position", "relative")
+          .style("width", "100px")
+          .attr("id", "tooltip-"+container.replace('#', ''));
 
-          // Three function that change the tooltip when user hover / move / leave a cell
-          var mouseover = function(d) {
-            tooltipScatterlot
-              .style("opacity", 1)
-          }
-          var mousemove = function(d) {
-            tooltipScatterlot
-              .html("Value: " + d.value)
-              .style("left", (d3.event.pageX + 5) + "px")
-              .style("top", (d3.event.pageY - 28) + "px")
-          }
-          var mouseleave = function(d) {
-            tooltipScatterlot
+        // Three function that change the tooltip when user hover / move / leave a cell
+        var mouseover = function(d) {
+          tooltipScatterlot
+            .style("opacity", 1)
+        }
+        var mousemove = function(d) {
+          tooltipScatterlot
+            .html("Value: " + d.value)
+            .style("left", (d3.event.pageX + 5) + "px")
+            .style("top", (d3.event.pageY - 28) + "px")
+        }
+        var mouseleave = function(d) {
+          tooltipScatterlot
+            .style("opacity", 0)
+        }
+
+      // Add the points
+      LinePlot
+        .append("g")
+        .selectAll("dot")
+        .data(data)
+        .enter()
+        .append("circle")
+          .attr("class", "myCircle")
+          .attr("cx", function(d) { return x(d.date) } )
+          .attr("cy", function(d) { return y(d.value) } )
+          .attr("r", 4)
+          .attr("stroke", "#69b3a2")
+          .attr("stroke-width", 3)
+          .attr("fill", "white")
+          // .on("mouseover", mouseover)
+          // .on("mousemove", mousemove)
+          // .on("mouseleave", mouseleave)
+
+        
+        // hover line
+        let hoverGroup = LinePlot.append('g')
+          .style('display', 'none')
+          .classed("hoverGroup", true);
+
+        let hoverRect = hoverGroup.append("rect")
+          .attr('width', "3px")
+          .attr('x', "50px")
+          .attr('height', height)
+          .attr('fill', 'lightgray')
+          .attr('id', 'hover-'+container.replace('#',''));
+
+        // tooltip for the hover line
+        const tooltip = svg.append("g")
+          .style("pointer-events", "none");
+
+
+          let mouseOverGroup = LinePlot.append("g")
+          .classed("mouse-over-effects", true);
+
+          let mouseDetectors = mouseOverGroup.selectAll("rect")
+              .data(data)
+              .enter()
+              .append("rect")
+              .style("fill", "black")
               .style("opacity", 0)
-          }
+              .attr('width', 16)
+              .attr("tooltip", "tooltip-"+container.replace('#', ''))
+              .attr("hoverRect", 'hover-'+container.replace('#',''))
+              .attr("date", (d) => d.date)
+              .attr("value", (d) => d.value)
+              .attr("height", height)
+              .attr("x", function(d){
+                return x(d.date) - 8;
+              })
+              .attr("y", 0)
+              .on("pointerenter pointermove", (d) => {
 
-        // Add the points
-        LinePlot
-          .append("g")
-          .selectAll("dot")
-          .data(data)
-          .enter()
-          .append("circle")
-            .attr("class", "myCircle")
-            .attr("cx", function(d) { return x(d.date) } )
-            .attr("cy", function(d) { return y(d.value) } )
-            .attr("r", 4)
-            .attr("stroke", "#69b3a2")
-            .attr("stroke-width", 3)
-            .attr("fill", "white")
-            .on("mouseover", mouseover)
-            .on("mousemove", mousemove)
-            .on("mouseleave", mouseleave)
+                let allTooltips = d3.selectAll(".tooltip");
+                allTooltips.style("opacity", 1);
+
+                let allHoverGroups = d3.selectAll(".hoverGroup");
+                allHoverGroups.style('display', 'block');
+
+                d3.selectAll(".mouse-over-effects").selectAll("rect")
+                  .each(function(d2){
+
+                    let date1 = new Date(d2.date);
+                    let date2 = new Date(d.date);
+                    if(date1.getTime() == date2.getTime()){
+
+                      let chartTooltipSelector = d3.select(this).attr("tooltip");
+                      let hoverRectSelector = d3.select(this).attr("hoverRect");
+
+                      d3.select("#"+chartTooltipSelector)
+                        .html(d2.date.getMonth() + "/" + d2.date.getDate() + "/" + d2.date.getFullYear() + "</br>" + parseFloat(d2.value).toFixed(2))
+                        .style("left", (x(d2.date) + 10)+"px")
+                        .style("top", "50px");
+
+                      d3.select("#"+hoverRectSelector).attr("x", x(d2.date) - 1.5);
+                                
+                    }                    
+                  });
+
+              })
+              .on("pointerleave", (d) => {
+                let allTooltips = d3.selectAll(".tooltip");
+                allTooltips.style("opacity", 0);
+
+                let allHoverGroups = d3.selectAll(".hoverGroup");
+                allHoverGroups.style('display', 'none');
+              });
 
     });
 }
