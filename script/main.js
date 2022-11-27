@@ -52,8 +52,11 @@ function matrixChart(){
     
     // defining size of svg and margins
     let margin = ({top: 10, right: 20, bottom: 50, left: 105});
-    let visWidth = 400;
-    let visHeight = 400;
+    // let visWidth = 400;
+    // let visHeight = 400;
+
+    var visWidth = $("#map-layer").width()*0.4;
+    var visHeight = $("#map-layer").width()*0.4;
 
     let waterComplaintsData = allData.features;
 
@@ -154,6 +157,7 @@ function matrixChart(){
       const xAxis = d3.axisBottom(x);
     
       const xAxisGroup = g.append("g")
+          .style("font-size", "0.9rem")
           .call(xAxis)
           .attr("transform", `translate(0, ${visHeight})`);
     
@@ -168,17 +172,18 @@ function matrixChart(){
       const yAxis = d3.axisLeft(y);
     
       const yAxisGroup = g.append("g")
+          .style("font-size", "0.9rem")
           .call(yAxis);
     
       yAxisGroup.append("text")
-        .attr("x", "-65px")
+        .attr("x", "-70px")
+        .attr("class", "label")
         .attr("y", visHeight / 2)
         .attr("fill", "black")
         .attr("text-anchor", "middle")
         .text("Street Type")
-        .style("font-size", "15px")
         .style("writing-mode", "vertical-rl");
-      
+
       let squaresGroup = g.append("g");
     
       function mouseover(d, tooltip) {
@@ -283,7 +288,8 @@ async function addDataMapbox(map){
     .style("position", "absolute")
     .style("z-index", 3)
     .style("right", "10px")
-    .style("top", "25px");
+    .style("top", "25px")
+    .style("font-size", "1.3rem");
 
   selectElem.append("option")
     .attr("value", "All time")
@@ -559,11 +565,11 @@ function drawAggMap(matrixChart, filteredComplaints){
   }
 
   d3.json("data/requests_by_zip.geojson", function(jsonData){
-    // var width = $("#map-layer").width();
-    // var height = $("#map-layer").height();
+    var width = $("#map-layer").width();
+    var height = $("#map-layer").height();
 
-    let width = 550;
-    let height = 550;
+    // let width = 550;
+    // let height = 550;
 
     var center = [-87.623177, 41.881832];
     var scale = 170;
@@ -573,7 +579,7 @@ function drawAggMap(matrixChart, filteredComplaints){
     //                     .translate([width/1.5, height/3]);
 
     var projection = d3.geoMercator().center(center)
-                        .scale(width*100)
+                        .scale(width*50)
                         .translate([width/1.5, height/3]);
     
     var path = d3.geoPath().projection(projection);
@@ -818,7 +824,7 @@ function CalendarPlot(container, models, countySelect){
 
 function LinePlot(container, year, complaint){
 
-  var margin = {top: 10, right: 30, bottom: 30, left: 60},
+  var margin = {top: 10, right: 30, bottom: 40, left: 60},
     width = $(container).width() - margin.left - margin.right,
     height = $(container).height() - margin.top - margin.bottom
 
@@ -889,20 +895,23 @@ function LinePlot(container, year, complaint){
         .range([ 0, width]);
       LinePlot.append("g")
         .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x))
+        .style("font-size", "0.9rem")
+        .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%b")))
         .append("text")
           .attr("class", "label")
           .attr("x", width-width/2)
-          .attr("y", 28)
-          .style("text-anchor", "end")
+          .attr("y", 40)
+          // .style("font-size", "1.3em")
+          .style("text-anchor", "middle")
           .attr("fill", "#000000")
           .text(String(xLevel));
 
       // Add Y axis
       var y = d3.scaleLinear()
         .domain([0, d3.max(data, function(d) { return +d.value; })])
-        .range([ height, 0 ]);
+        .range([ height, 0 ]).nice();
       LinePlot.append("g")
+        .style("font-size", "0.9rem")
         .call(d3.axisLeft(y))
         .append("text")
         .attr("class", "label")
@@ -950,22 +959,6 @@ function LinePlot(container, year, complaint){
           .style("width", "100px")
           .attr("id", "tooltip-"+container.replace('#', ''));
 
-        // Three function that change the tooltip when user hover / move / leave a cell
-        var mouseover = function(d) {
-          tooltipScatterlot
-            .style("opacity", 1)
-        }
-        var mousemove = function(d) {
-          tooltipScatterlot
-            .html("Value: " + d.value)
-            .style("left", (d3.event.pageX + 5) + "px")
-            .style("top", (d3.event.pageY - 28) + "px")
-        }
-        var mouseleave = function(d) {
-          tooltipScatterlot
-            .style("opacity", 0)
-        }
-
       // Add the points
       LinePlot
         .append("g")
@@ -980,10 +973,6 @@ function LinePlot(container, year, complaint){
           .attr("stroke", "#69b3a2")
           .attr("stroke-width", 3)
           .attr("fill", "white")
-          // .on("mouseover", mouseover)
-          // .on("mousemove", mousemove)
-          // .on("mouseleave", mouseleave)
-
         
         // hover line
         let hoverGroup = LinePlot.append('g')
@@ -1035,12 +1024,13 @@ function LinePlot(container, year, complaint){
                     let date1 = new Date(d2.date);
                     let date2 = new Date(d.date);
                     if(date1.getTime() == date2.getTime()){
+                      console.log("Comparing "+d2.date.getMonth()+" "+d.date);
 
                       let chartTooltipSelector = d3.select(this).attr("tooltip");
                       let hoverRectSelector = d3.select(this).attr("hoverRect");
 
                       d3.select("#"+chartTooltipSelector)
-                        .html(d2.date.getMonth() + "/" + d2.date.getDate() + "/" + d2.date.getFullYear() + "</br>" + parseFloat(d2.value).toFixed(2))
+                        .html((d2.date.getMonth()+1) + "/" + d2.date.getDate() + "/" + d2.date.getFullYear() + "</br>" + parseFloat(d2.value).toFixed(2))
                         .style("left", (x(d2.date) + 10)+"px")
                         .style("top", "50px");
 
